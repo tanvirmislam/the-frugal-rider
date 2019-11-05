@@ -7,6 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.action_chains import ActionChains
 from bs4 import BeautifulSoup
 from pathlib import Path
 
@@ -49,7 +50,7 @@ def get_driver(headless: bool = True, width :int = 1440, height: int = 900) -> w
         options.headless = True
     else:
         options.headless = False
-        # options.add_argument("--kiosk")
+        options.add_argument("--kiosk")
         # options.add_argument("--start-maximized")
     
     # ----------------------------------
@@ -57,7 +58,8 @@ def get_driver(headless: bool = True, width :int = 1440, height: int = 900) -> w
     # ----------------------------------
     try:
         driver = webdriver.Chrome(options=options, executable_path=str(exec_path))
-        driver.set_window_size(1440, 900)
+        if headless is True:
+            driver.set_window_size(1440, 900)
         return driver
     except selenium.common.exceptions.WebDriverException:
         print('Incompatible chromedriver')
@@ -101,7 +103,15 @@ def peter_pan(driver: webdriver) -> None:
     url = 'https://peterpanbus.com/'
 
     departure_xpath = '/html/body/div[7]/div[1]/div[1]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/div/div/div/div/div/div[2]/div/div[2]/div[1]/div/div[2]/div[1]/div[1]/input'
-    arrival_xpath = '/html/body/div[7]/div[1]/div[1]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/div/div/div/div/div/div[2]/div/div[2]/div[2]/div/div[2]/div[1]/div[1]/input'
+    departure_cities_list_xpath = '/html/body/div[7]/div[1]/div[1]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/div/div/div/div/div/div[2]/div/div[2]/div[1]/div/div[2]/div[1]/ul/li[*]'
+    departure_city_clickable_xpath_relative_to_list = './/a'
+    departure_city_name_xpath_relative_to_list = './/a/span'
+    
+    arrival_xpath = '/html/body/div[7]/div[1]/div[1]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/div/div/div/div/div/div[2]/div/div[2]/div[2]/div/div[2]/div[1]/div[1]/input'    
+    arrival_cities_list_xpath = '/html/body/div[7]/div[1]/div[1]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/div/div/div/div/div/div[2]/div/div[2]/div[2]/div/div[2]/div[1]/ul/li[*]'
+    arrival_city_clickable_xpath_relative_to_list = './/a'
+    arrival_city_name_xpath_relative_to_list = './/a/span'
+
     date_xpath = '/html/body/div[7]/div[1]/div[1]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/div/div/div/div/div/div[2]/div/div[3]/div[1]/div/div/div[1]/div/input'
     submit_xpath = '/html/body/div[7]/div[1]/div[1]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/div/div/div/div/div/div[2]/div/div[3]/div[3]/button'
     
@@ -120,10 +130,43 @@ def peter_pan(driver: webdriver) -> None:
     submit_elem = driver.find_element(By.XPATH, submit_xpath)
     
     print('Selecting departure city as: ' + departure_city)
-    fill_input_element(departure_elem, departure_city)
+    departure_elem.click()
+    departure_cities_li_elems = driver.find_elements(By.XPATH, departure_cities_list_xpath)
+    for elem in departure_cities_li_elems:
+        city_click_elem = elem.find_element(By.XPATH, departure_city_clickable_xpath_relative_to_list)
+        city_name_elem = elem.find_element(By.XPATH, departure_city_name_xpath_relative_to_list)
+        print(city_name_elem.get_attribute('innerHTML'))
+
+        if city_name_elem.get_attribute('innerHTML') == departure_city:
+            actions = ActionChains(driver)
+            actions.move_to_element(city_name_elem).perform()
+            actions.reset_actions()
+            city_click_elem.click()
+            break
+
+    # fill_input_element(departure_elem, departure_city)
 
     print('Selecting arrival city as: ' + arrival_city)
-    fill_input_element(arrival_elem, arrival_city)
+    actions = ActionChains(driver)
+    actions.move_to_element(arrival_elem).perform()
+    actions.reset_actions()
+
+    arrival_elem.click()
+    arrival_cities_li_elems = driver.find_elements(By.XPATH, arrival_cities_list_xpath)
+    print(len(arrival_cities_li_elems))
+    for elem in arrival_cities_li_elems:
+        city_click_elem = elem.find_element(By.XPATH, arrival_city_clickable_xpath_relative_to_list)
+        city_name_elem = elem.find_element(By.XPATH, arrival_city_name_xpath_relative_to_list)
+        print(city_name_elem.get_attribute('innerHTML'))
+
+        if city_name_elem.get_attribute('innerHTML') == arrival_city:
+            actions = ActionChains(driver)
+            actions.move_to_element(city_name_elem).perform()
+            actions.reset_actions()
+            city_click_elem.click()
+            break
+
+    # fill_input_element(arrival_elem, arrival_city)
 
     print('Filling up date: ' + departure_date)
     date_elem.click()
