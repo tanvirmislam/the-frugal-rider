@@ -1,6 +1,6 @@
 # The Frugal Rider
 
-#### A python web scraper to scrape cheapest bus tickets
+#### A python web scraper to find the cheapest bus tickets
 ___
 
 Scrape bus tickets on multiple websites and get a list of cheapest available tickets using this application!
