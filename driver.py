@@ -71,6 +71,9 @@ class Driver(object):
         else:
             options.headless = False
 
+        options.add_argument('--enable-popup-blocking')
+        options.add_argument('disable-infobars')
+        options.add_argument('disable-notifications')
         options.add_argument('--window-size=' + str(width) + 'x' + str(height))
 
         if system_name == "windows":

@@ -1,3 +1,4 @@
+import pandas as pd
 import time
 import calendar
 import threading
@@ -26,22 +27,31 @@ class Greyhound(BusService):
         self.arrival_city_autocomplete_lists_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[1]/div[2]/div/ul/li[*]'
         self.arrival_city_name_xpath_relative_to_list_item = './/div'
 
+        self.depart_date_box_id = 'datepicker-from'
+        self.depart_datepicker_calendar_div_id = 'ui-datepicker-div'
+        self.depart_datepicker_prev_month_button_xpath_relative_to_calendar_div = './/div/a[1]'
+        self.depart_datepicker_next_month_button_xpath_relative_to_calendar_div = './/div/a[2]'
+        self.depart_datepicker_month_name_xpath_relative_to_calendar_div = './/div/div/span[1]'
+        self.depart_datepicker_year_xpath_relative_to_calendar_div = './/div/div/span[2]'
+        self.depart_datepicker_calendar_rows_xpath_relative_to_calendar_div = './/table/tbody/tr[*]'
+        self.depart_datepicker_calendar_cells_xpath_relative_to_row = './/td[*][@data-handler="selectDay"][@data-event="click"]'
+        self.depart_datepicker_calendar_day_xpath_relative_to_cell = './/a'
+
         self.depart_date_box_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[2]/div/div/div/div/input'
         self.depart_datepicker_prev_month_button_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[2]/div/div/div/div/div/div/a[1]'
         self.depart_datepicker_next_month_button_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[2]/div/div/div/div/div/div/a[2]'
         self.depart_datepicker_month_name_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[2]/div/div/div/div/div/div/div/span[1]'
         self.depart_datepicker_year_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[2]/div/div/div/div/div/div/div/span[2]'
         self.depart_datepicker_calendar_rows_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[2]/div/div/div/div/div/table/tbody/tr[*]'
-        self.depart_datepicker_calendar_cells_xpath_relative_to_row = './/td[*][@data-handler="selectDay"][@data-event="click"]'
-        self.depart_datepicker_calendar_day_xpath_relative_to_cell = './/a'
 
-        self.submit_button_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[2]/div[4]/div/p/input'
+
+        self.submit_button_id = 'fare-search-btn'
 
         # Delay
         self.delay_for_autocomplete_suggestions = 1.0
 
 
-    def select_cities(self) -> None:
+    def select_cities(self) -> bool:
         print('\n> Greyhound [' + str(threading.current_thread().name) + ']: Selecting departure city')
 
         # Fill departure city text
@@ -54,16 +64,22 @@ class Greyhound(BusService):
 
         # Look through the suggestions and click
         departure_city_list_elements = self.driver.get_elements(By.XPATH, self.departure_city_autocomplete_lists_xpath)
-        print('size of departure_city_list_elements: ' + str(len(departure_city_list_elements)))
+        is_departure_city_found = False
+        # print('size of departure_city_list_elements: ' + str(len(departure_city_list_elements)))
 
         for li_element in departure_city_list_elements:
             curr_city = li_element.get_attribute('aria-label')
-            print(curr_city)
+            # print(curr_city)
 
             if self.order.departure_city in curr_city:
                 self.driver.move_to_element(li_element)
                 li_element.click()
+                is_departure_city_found = True
                 break
+
+        if not is_departure_city_found:
+            print('\n> Greyhound [' + str(threading.current_thread().name) + ']: Unable to find departure city')
+            return False
 
         print('\n> Greyhound [' + str(threading.current_thread().name) + ']: Selecting arrival city')
 
@@ -77,33 +93,47 @@ class Greyhound(BusService):
 
         # Look through the suggestions and click
         arrival_city_list_elements = self.driver.get_elements(By.XPATH, self.arrival_city_autocomplete_lists_xpath)
-        print('size of departure_city_list_elements: ' + str(len(arrival_city_list_elements)))
+        is_arrival_city_found = False
+        # print('size of arrival_city_list_elements: ' + str(len(arrival_city_list_elements)))
 
         for li_element in arrival_city_list_elements:
             curr_city = li_element.get_attribute('aria-label')
-            print(curr_city)
+            # print(curr_city)
 
             if self.order.arrival_city in curr_city:
                 self.driver.move_to_element(li_element)
                 li_element.click()
+                is_arrival_city_found = True
                 break
 
+        if not is_arrival_city_found:
+            print('\n> Greyhound [' + str(threading.current_thread().name) + ']: Unable to find arrival city')
+            return False
 
-    def select_date(self):
+        return True
+
+
+    def select_date(self) -> bool:
         print('\n> Greyhound [' + str(threading.current_thread().name) + ']: Selecting departure date')
 
+        if self.order.departure_date < pd.Timestamp(str(pd.datetime.now().date())):
+            print('\n> Greyhound [' + str(threading.current_thread().name) + ']: Invalid date')
+            return False
+
         # Get Web elements by XPATH
-        depart_date_box_element = self.driver.get_element(By.XPATH, self.depart_date_box_xpath)
+        depart_date_box_element = self.driver.get_element(By.ID, self.depart_date_box_id)
 
         # Move the date picker into view, and click to expand calender
         self.driver.move_to_element(depart_date_box_element)
         depart_date_box_element.click()
 
         # Navigate to the right year / month on the calendar
-        depart_datepicker_month_name_elem = self.driver.get_element(By.XPATH, self.depart_datepicker_month_name_xpath)
-        depart_datepicker_year_elem = self.driver.get_element(By.XPATH, self.depart_datepicker_year_xpath)
-        depart_datepicker_prev_month_button_elem = self.driver.get_element(By.XPATH, self.depart_datepicker_prev_month_button_xpath)
-        depart_datepicker_next_month_button_elem = self.driver.get_element(By.XPATH, self.depart_datepicker_next_month_button_xpath)
+        depart_datepicker_calendar_elem = self.driver.get_element(By.ID, self.depart_datepicker_calendar_div_id)
+
+        depart_datepicker_month_name_elem = self.driver.get_relative_element(depart_datepicker_calendar_elem, By.XPATH, self.depart_datepicker_month_name_xpath_relative_to_calendar_div)
+        depart_datepicker_year_elem = self.driver.get_relative_element(depart_datepicker_calendar_elem, By.XPATH, self.depart_datepicker_year_xpath_relative_to_calendar_div)
+        depart_datepicker_prev_month_button_elem = self.driver.get_relative_element(depart_datepicker_calendar_elem, By.XPATH, self.depart_datepicker_prev_month_button_xpath_relative_to_calendar_div)
+        depart_datepicker_next_month_button_elem = self.driver.get_relative_element(depart_datepicker_calendar_elem, By.XPATH, self.depart_datepicker_next_month_button_xpath_relative_to_calendar_div)
         self.driver.move_to_element(depart_datepicker_month_name_elem)
 
         # month name (abbreviated) to month number conversion dict
@@ -115,7 +145,7 @@ class Greyhound(BusService):
             # Read current month and year
             curr_month = depart_datepicker_month_name_elem.get_attribute('innerHTML')
             curr_year = int(depart_datepicker_year_elem.get_attribute('innerHTML'))
-            print(str(curr_month) + ', ' + str(curr_year))
+            # print(str(curr_month) + ', ' + str(curr_year))
 
             # Check them against the ticket order
             if self.order.departure_date.month_name() == curr_month and self.order.departure_date.year == curr_year:
@@ -130,13 +160,13 @@ class Greyhound(BusService):
                 depart_datepicker_prev_month_button_elem.click()
 
             # Refresh element to avoid StaleElement error
-            depart_datepicker_month_name_elem = self.driver.get_element(By.XPATH, self.depart_datepicker_month_name_xpath)
-            depart_datepicker_year_elem = self.driver.get_element(By.XPATH, self.depart_datepicker_year_xpath)
-            depart_datepicker_prev_month_button_elem = self.driver.get_element(By.XPATH, self.depart_datepicker_prev_month_button_xpath)
-            depart_datepicker_next_month_button_elem = self.driver.get_element(By.XPATH, self.depart_datepicker_next_month_button_xpath)
+            depart_datepicker_month_name_elem = self.driver.get_relative_element(depart_datepicker_calendar_elem, By.XPATH, self.depart_datepicker_month_name_xpath_relative_to_calendar_div)
+            depart_datepicker_year_elem = self.driver.get_relative_element(depart_datepicker_calendar_elem, By.XPATH, self.depart_datepicker_year_xpath_relative_to_calendar_div)
+            depart_datepicker_prev_month_button_elem = self.driver.get_relative_element(depart_datepicker_calendar_elem, By.XPATH, self.depart_datepicker_prev_month_button_xpath_relative_to_calendar_div)
+            depart_datepicker_next_month_button_elem = self.driver.get_relative_element(depart_datepicker_calendar_elem, By.XPATH, self.depart_datepicker_next_month_button_xpath_relative_to_calendar_div)
 
         # Iterate through the dates in the current month to find and click on the ticket order date
-        calendar_row_elements = self.driver.get_elements(By.XPATH, self.depart_datepicker_calendar_rows_xpath)
+        calendar_row_elements = self.driver.get_relative_elements(depart_datepicker_calendar_elem, By.XPATH, self.depart_datepicker_calendar_rows_xpath_relative_to_calendar_div)
 
         is_date_found = False
         i = 0
@@ -148,7 +178,7 @@ class Greyhound(BusService):
 
             while not is_date_found and j < len(calendar_cell_elements):
                 curr_date = int(self.driver.get_relative_element(calendar_cell_elements[j], By.XPATH, self.depart_datepicker_calendar_day_xpath_relative_to_cell).get_attribute('innerHTML'))
-                print(curr_date)
+                # print(curr_date)
 
                 if curr_date == self.order.departure_date.day:
                     is_date_found = True
@@ -160,13 +190,14 @@ class Greyhound(BusService):
             i += 1
 
         self.driver.press_key(Keys.TAB)
+        return True
 
 
-    def submit_search(self):
+    def submit_search(self) -> None:
         print('\n> Greyhound [' + str(threading.current_thread().name) + ']: Submitting search')
 
         # Get the submit button WebElement
-        submit_button_element = self.driver.get_element(By.XPATH, self.submit_button_xpath)
+        submit_button_element = self.driver.get_element(By.ID, self.submit_button_id)
 
         # Move the button into view
         self.driver.move_to_element(submit_button_element)
@@ -177,15 +208,20 @@ class Greyhound(BusService):
 
 
     def search(self) -> bool:
+        # If session has not been started, return False
         if not self.is_session_running:
             print('Error: session is not running')
             return False
 
         try:
-            self.select_cities()
-            self.select_date()
+            if not self.select_cities():
+                return False
+
+            if not self.select_date():
+                return False
+
             self.submit_search()
-            time.sleep(5)
+            time.sleep(10)
             return True
 
         except Driver.failure_exceptions as e:

@@ -1,3 +1,4 @@
+import pandas as pd
 import time
 import calendar
 import threading
@@ -54,6 +55,7 @@ class Peterpan(BusService):
 
         # Get the list elements after the drop-down appears
         departure_cities_li_elements = self.driver.get_elements(By.XPATH, self.departure_cities_list_xpath)
+        is_departure_city_found = False
 
         # Iterate the list and select the correct city
         for li_element in departure_cities_li_elements:
@@ -65,7 +67,12 @@ class Peterpan(BusService):
             if self.order.departure_city in city_name_element.get_attribute('innerHTML'):
                 self.driver.move_to_element(city_name_element)
                 city_name_element.click()
+                is_departure_city_found = True
                 break
+
+        if not is_departure_city_found:
+            print('\n> Peterpan [' + str(threading.current_thread().name) + ']: Unable to find departure city')
+            return False
 
         print('\n> Peterpan [' + str(threading.current_thread().name) + ']: Selecting arrival city')
 
@@ -78,6 +85,7 @@ class Peterpan(BusService):
 
         # Get the list elements after the drop-down appears
         arrival_cities_li_elements = self.driver.get_elements(By.XPATH, self.arrival_cities_list_xpath)
+        is_arrival_city_found = False
 
         for li_element in arrival_cities_li_elements:
             # Get the city name element
@@ -88,13 +96,22 @@ class Peterpan(BusService):
             if self.order.arrival_city in city_name_element.get_attribute('innerHTML'):
                 self.driver.move_to_element(city_name_element)
                 city_name_element.click()
+                is_arrival_city_found = True
                 break
+
+        if not is_arrival_city_found:
+            print('\n> Peterpan [' + str(threading.current_thread().name) + ']: Unable to find arrival city')
+            return False
 
         return True
 
 
     def select_date(self) -> None:
         print('\n> Peterpan [' + str(threading.current_thread().name) + ']: Selecting departure date')
+
+        if self.order.departure_date < pd.Timestamp(str(pd.datetime.now().date())):
+            print('\n> Peterpan [' + str(threading.current_thread().name) + ']: Invalid date')
+            return False
 
         # Get Web elements by XPATH
         date_box_element = self.driver.get_element(By.XPATH, self.date_box_xpath)
@@ -143,6 +160,7 @@ class Peterpan(BusService):
         is_date_found = False
         i = 0
 
+        # noinspection PyInterpreter
         while not is_date_found and i < len(calendar_row_elements):
             # Get the list of date cell elements in the calendar's current row
             calendar_cell_elements = self.driver.get_relative_elements(calendar_row_elements[i], By.XPATH, self.calendar_cell_xpath_relative_to_row)
@@ -162,6 +180,7 @@ class Peterpan(BusService):
             i += 1
 
         self.driver.press_key(Keys.TAB)
+        return True
 
     def submit_search(self) -> None:
         print('\n> Peterpan [' + str(threading.current_thread().name) + ']: Submitting search')
@@ -183,9 +202,12 @@ class Peterpan(BusService):
             return False
 
         try:
-            # Make selections
-            self.select_cities()
-            self.select_date()
+            if not self.select_cities():
+                return False
+
+            if not self.select_date():
+                return False
+
             self.submit_search()
             time.sleep(10)
             return True
