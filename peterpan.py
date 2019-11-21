@@ -40,15 +40,15 @@ class Peterpan(BusService):
         self.calendar_cell_xpath_relative_to_row = './/div[@class="DayPicker-Day"][@aria-disabled="false"]'
 
         self.result_container_id = 'schedule-results'
-        self.trip_containers_xpath_relative_to_result_container = './/[@class=custom-bootstrap-container]'
-        self.depart_date_xpath_relative_to_trip_container = './/div/div[1]/div[1]'
-        self.depart_time_xpath_relative_to_trip_container = './/div/div[1]/div[2]'
-        self.depart_location_xpath_relative_to_trip_container = './/div/div[1]/div[3]'
+        self.trip_containers_class = 'custom-bootstrap-container'
+        self.departure_date_xpath_relative_to_trip_container = './/div/div[1]/div[1]'
+        self.departure_time_xpath_relative_to_trip_container = './/div/div[1]/div[2]'
+        self.departure_city_xpath_relative_to_trip_container = './/div/div[1]/div[3]'
         self.arrival_date_xpath_relative_to_trip_container = './/div/div[3]/div[1]'
         self.arrival_time_xpath_relative_to_trip_container = './/div/div[3]/div[2]'
-        self.arrival_location_xpath_relative_to_trip_container = './/div/div[3]/div[3]'
+        self.arrival_city_xpath_relative_to_trip_container = './/div/div[3]/div[3]'
 
-
+        # Delay
         self.delay_for_arrival_city_load = 0.5
 
 
@@ -200,6 +200,7 @@ class Peterpan(BusService):
         self.driver.press_key(Keys.TAB)
         return True
 
+
     def submit_search(self) -> bool:
         self.display_message('Submitting search')
 
@@ -215,7 +216,21 @@ class Peterpan(BusService):
         return True
 
 
-    def scrape(self):
-        pass
+    def collect_data(self) -> bool:
+        result_container_element = self.driver.get_element(By.ID, self.result_container_id)
+        trip_container_elements = self.driver.get_relative_elements(result_container_element, By.CLASS_NAME, self.trip_containers_class)
+
+        for trip_element in trip_container_elements:
+            departure_date = self.driver.get_relative_element(trip_element, By.XPATH, self.departure_date_xpath_relative_to_trip_container).get_attribute('innerHTML')
+            departure_time = self.driver.get_relative_element(trip_element, By.XPATH, self.departure_time_xpath_relative_to_trip_container).get_attribute('innerHTML')
+            departure_city = self.driver.get_relative_element(trip_element, By.XPATH, self.departure_city_xpath_relative_to_trip_container).get_attribute('innerHTML')
+
+            arrival_date = self.driver.get_relative_element(trip_element, By.XPATH, self.arrival_date_xpath_relative_to_trip_container).get_attribute('innerHTML')
+            arrival_time = self.driver.get_relative_element(trip_element, By.XPATH, self.arrival_time_xpath_relative_to_trip_container).get_attribute('innerHTML')
+            arrival_city = self.driver.get_relative_element(trip_element, By.XPATH, self.arrival_city_xpath_relative_to_trip_container).get_attribute('innerHTML')
+
+            self.schedules = self.schedules.append(pd.Series([departure_date, departure_time, departure_city, arrival_date, arrival_time, arrival_city], index=self.schedules.columns), ignore_index=True)
+
+        return True
 
 

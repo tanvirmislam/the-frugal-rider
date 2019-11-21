@@ -26,19 +26,21 @@ def find_tickets(bus_service_name: str, departure_city: str, arrival_city: str, 
     else:
         print('Worker ' + str(threading.current_thread().name) + ' fatal error: invalid parameter(s)')
 
+    print(bus_service_object)
+
     print('\nWorker ' + str(threading.current_thread().name) + ' signing out.')
 
 
 def main() -> None:
-    # find_tickets('Peterpan', 'New York', 'Hartford', '2020-02-15')
+    find_tickets('Peterpan', 'New York', 'Hartford', '2020-02-15')
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        search_1 = executor.submit(find_tickets, 'Peterpan', 'New York', 'Hartford', '2020-03-27')
-        search_2 = executor.submit(find_tickets, 'Greyhound', 'New York', 'Hartford', '2020-03-27')
-
-        thread_list = [search_1, search_2]
-
-        (finished, pending) = futures.wait(thread_list, return_when=futures.ALL_COMPLETED)
+    # with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    #     search_1 = executor.submit(find_tickets, 'Peterpan', 'New York', 'Hartford', '2020-03-27')
+    #     search_2 = executor.submit(find_tickets, 'Greyhound', 'New York', 'Hartford', '2020-03-27')
+    #
+    #     thread_list = [search_1, search_2]
+    #
+    #     (finished, pending) = futures.wait(thread_list, return_when=futures.ALL_COMPLETED)
 
 
 if __name__ == '__main__':

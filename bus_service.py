@@ -15,12 +15,27 @@ class BusService(metaclass=ABCMeta):
         self.is_session_running = False
         self.driver = browser_driver
         self.order = bus_ticket_order
-        self.schedule_df = pd.DataFrame(columns=['date', 'departure time', 'arrival time'])
+
+        self.schedules = pd.DataFrame(
+            columns=['departure_date', 'departure_time', 'departure_city',
+                     'arrival_date', 'arrival_time', 'arrival_city']
+        )
 
         # Call function implemented by child classes
         self.set_name()
         self.set_url()
 
+
+    def __str__(self):
+        result =                                                                                                    \
+            '\n-----------------------------------------------------------------------------------------------\n' + \
+            '> ' + self.name +                                                                                      \
+            ' [' + str(threading.current_thread().name) + '] Results: ' +                                           \
+            '\n-----------------------------------------------------------------------------------------------\n' + \
+            self.schedules.to_string() +                                                                            \
+            '\n-----------------------------------------------------------------------------------------------'
+
+        return result
 
     @abstractmethod
     def set_name(self) -> None:
@@ -48,7 +63,7 @@ class BusService(metaclass=ABCMeta):
 
 
     @abstractmethod
-    def scrape(self) -> None:
+    def collect_data(self) -> bool:
         pass
 
 
@@ -72,7 +87,24 @@ class BusService(metaclass=ABCMeta):
             self.submit_search()  # implemented by child class
             self.driver.wait_till_page_load(old_html_element)
 
-            time.sleep(10)
+            return True
+
+        except Driver.failure_exceptions as e:
+            Driver.print_failure(e)
+            return False
+
+
+    def scrape(self) -> bool:
+        # If session has not been started, return False
+        if not self.is_session_running:
+            print('Error: session is not running')
+            return False
+
+        try:
+            # Collect data (implemented by child class)
+            if not self.collect_data():
+                return False
+
             return True
 
         except Driver.failure_exceptions as e:

@@ -215,6 +215,6 @@ class Greyhound(BusService):
         return True
 
 
-    def scrape(self) -> None:
+    def collect_data(self) -> bool:
         pass
 
