@@ -19,6 +19,7 @@ class Driver(object):
         self.chrome = None
         self.is_headless = None
         self.delay_after_view_change = 0.2
+        self.page_load_check_interval = 0.5
 
     def init_driver(self, is_headless: bool, width: int, height: int) -> bool:
         """
@@ -119,8 +120,12 @@ class Driver(object):
         return parent_element.find_elements(fetch_method, specifier)
 
 
+    def get_html_element(self) -> WebElement:
+        return self.get_element(By.TAG_NAME, 'html')
+
+
     def scroll_element_into_view(self, element: WebElement) -> None:
-        self.chrome.execute_script(Driver.scroll_into_view_command(), element)
+        self.chrome.execute_script(Driver.get_scroll_into_view_command(), element)
         time.sleep(self.delay_after_view_change)
 
 
@@ -137,12 +142,17 @@ class Driver(object):
         text_element.send_keys(text)
 
 
+    def wait_till_page_load(self, old_html_element: WebElement) -> None:
+        while self.get_element(By.TAG_NAME, 'html') == old_html_element:
+            time.sleep(self.page_load_check_interval)
+
+
     def quit(self) -> None:
         self.chrome.quit()
 
 
     @staticmethod
-    def scroll_into_view_command() -> str:
+    def get_scroll_into_view_command() -> str:
         js_cmd = "var viewPortHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);" + \
                  "var elementTop = arguments[0].getBoundingClientRect().top;" + \
                  "window.scrollBy(0, elementTop-(viewPortHeight/3));"

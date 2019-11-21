@@ -39,11 +39,29 @@ class Peterpan(BusService):
         self.calendar_row_class = 'DayPicker-Week'
         self.calendar_cell_xpath_relative_to_row = './/div[@class="DayPicker-Day"][@aria-disabled="false"]'
 
+        self.result_container_id = 'schedule-results'
+        self.trip_containers_xpath_relative_to_result_container = './/[@class=custom-bootstrap-container]'
+        self.depart_date_xpath_relative_to_trip_container = './/div/div[1]/div[1]'
+        self.depart_time_xpath_relative_to_trip_container = './/div/div[1]/div[2]'
+        self.depart_location_xpath_relative_to_trip_container = './/div/div[1]/div[3]'
+        self.arrival_date_xpath_relative_to_trip_container = './/div/div[3]/div[1]'
+        self.arrival_time_xpath_relative_to_trip_container = './/div/div[3]/div[2]'
+        self.arrival_location_xpath_relative_to_trip_container = './/div/div[3]/div[3]'
+
+
         self.delay_for_arrival_city_load = 0.5
 
 
+    def set_name(self):
+        self.name = 'Peterpan'
+
+
+    def set_url(self):
+        self.home_url = 'https://peterpanbus.com/'
+
+
     def select_cities(self) -> bool:
-        print('\n> Peterpan [' + str(threading.current_thread().name) + ']: Selecting departure city')
+        self.display_message('Selecting departure city')
 
         # Get Web elements by XPATH
         departure_element = self.driver.get_element(By.XPATH, self.departure_xpath)
@@ -71,10 +89,10 @@ class Peterpan(BusService):
                 break
 
         if not is_departure_city_found:
-            print('\n> Peterpan [' + str(threading.current_thread().name) + ']: Unable to find departure city')
+            self.display_message('Unable to find departure city')
             return False
 
-        print('\n> Peterpan [' + str(threading.current_thread().name) + ']: Selecting arrival city')
+        self.display_message('Selecting arrival city')
 
         # Scroll to departure city box, and click it to expand the list
         self.driver.move_to_element(arrival_element)
@@ -100,17 +118,17 @@ class Peterpan(BusService):
                 break
 
         if not is_arrival_city_found:
-            print('\n> Peterpan [' + str(threading.current_thread().name) + ']: Unable to find arrival city')
+            self.display_message('Unable to find arrival city')
             return False
 
         return True
 
 
-    def select_date(self) -> None:
-        print('\n> Peterpan [' + str(threading.current_thread().name) + ']: Selecting departure date')
+    def select_dates(self) -> bool:
+        self.display_message('Selecting departure date')
 
         if self.order.departure_date < pd.Timestamp(str(pd.datetime.now().date())):
-            print('\n> Peterpan [' + str(threading.current_thread().name) + ']: Invalid date')
+            self.display_message('Invalid date')
             return False
 
         # Get Web elements by XPATH
@@ -182,8 +200,8 @@ class Peterpan(BusService):
         self.driver.press_key(Keys.TAB)
         return True
 
-    def submit_search(self) -> None:
-        print('\n> Peterpan [' + str(threading.current_thread().name) + ']: Submitting search')
+    def submit_search(self) -> bool:
+        self.display_message('Submitting search')
 
         # Get the submit button WebElement
         submit_button_element = self.driver.get_element(By.XPATH, self.submit_button_xpath)
@@ -194,35 +212,10 @@ class Peterpan(BusService):
         # Click
         submit_button_element.click()
 
+        return True
 
-    def search(self) -> bool:
-        # If session has not been started, return False
-        if not self.is_session_running:
-            print('Error: session is not running')
-            return False
-
-        try:
-            if not self.select_cities():
-                return False
-
-            if not self.select_date():
-                return False
-
-            self.submit_search()
-            time.sleep(10)
-            return True
-
-        except Driver.failure_exceptions as e:
-            Driver.print_failure(e)
-            return False
 
     def scrape(self):
         pass
 
 
-    def set_name(self):
-        self.name = 'peterpan'
-
-
-    def set_url(self):
-        self.url = 'https://peterpanbus.com/'

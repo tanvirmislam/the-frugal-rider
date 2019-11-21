@@ -20,11 +20,11 @@ class Greyhound(BusService):
 
         # Full Xpath
         self.departure_city_text_box_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[1]/div[1]/div/input[1]'
-        self.departure_city_autocomplete_lists_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[1]/div[1]/div/ul/li[*]'
+        self.departure_city_autocomplete_lists_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[1]/div[1]/div/ul/li[*][@class="ui-menu-item"]'
         self.departure_city_name_xpath_relative_to_list_item = './/div'
 
         self.arrival_city_text_box_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[1]/div[2]/div/input[1]'
-        self.arrival_city_autocomplete_lists_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[1]/div[2]/div/ul/li[*]'
+        self.arrival_city_autocomplete_lists_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[1]/div[2]/div/ul/li[*][@class="ui-menu-item"]'
         self.arrival_city_name_xpath_relative_to_list_item = './/div'
 
         self.depart_date_box_id = 'datepicker-from'
@@ -44,15 +44,22 @@ class Greyhound(BusService):
         self.depart_datepicker_year_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[2]/div/div/div/div/div/div/div/span[2]'
         self.depart_datepicker_calendar_rows_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[2]/div/div/div/div/div/table/tbody/tr[*]'
 
-
         self.submit_button_id = 'fare-search-btn'
 
         # Delay
-        self.delay_for_autocomplete_suggestions = 1.0
+        self.delay_for_autocomplete_suggestions = 1.2
+
+
+    def set_name(self):
+        self.name = 'Greyhound'
+
+
+    def set_url(self):
+        self.home_url = 'https://greyhound.com/en'
 
 
     def select_cities(self) -> bool:
-        print('\n> Greyhound [' + str(threading.current_thread().name) + ']: Selecting departure city')
+        self.display_message('Selecting departure city')
 
         # Fill departure city text
         departure_city_text_box_element = self.driver.get_element(By.XPATH, self.departure_city_text_box_xpath)
@@ -78,10 +85,10 @@ class Greyhound(BusService):
                 break
 
         if not is_departure_city_found:
-            print('\n> Greyhound [' + str(threading.current_thread().name) + ']: Unable to find departure city')
+            self.display_message('Unable to find departure city')
             return False
 
-        print('\n> Greyhound [' + str(threading.current_thread().name) + ']: Selecting arrival city')
+        self.display_message('Selecting arrival city')
 
         # Fill arrival city text
         arrival_city_text_box_element = self.driver.get_element(By.XPATH, self.arrival_city_text_box_xpath)
@@ -107,17 +114,17 @@ class Greyhound(BusService):
                 break
 
         if not is_arrival_city_found:
-            print('\n> Greyhound [' + str(threading.current_thread().name) + ']: Unable to find arrival city')
+            self.display_message('Unable to find arrival city')
             return False
 
         return True
 
 
-    def select_date(self) -> bool:
-        print('\n> Greyhound [' + str(threading.current_thread().name) + ']: Selecting departure date')
+    def select_dates(self) -> bool:
+        self.display_message('Selecting departure date')
 
         if self.order.departure_date < pd.Timestamp(str(pd.datetime.now().date())):
-            print('\n> Greyhound [' + str(threading.current_thread().name) + ']: Invalid date')
+            self.display_message('Invalid date')
             return False
 
         # Get Web elements by XPATH
@@ -193,8 +200,8 @@ class Greyhound(BusService):
         return True
 
 
-    def submit_search(self) -> None:
-        print('\n> Greyhound [' + str(threading.current_thread().name) + ']: Submitting search')
+    def submit_search(self) -> bool:
+        self.display_message('Submitting search')
 
         # Get the submit button WebElement
         submit_button_element = self.driver.get_element(By.ID, self.submit_button_id)
@@ -205,37 +212,9 @@ class Greyhound(BusService):
         # Click
         submit_button_element.click()
 
-
-
-    def search(self) -> bool:
-        # If session has not been started, return False
-        if not self.is_session_running:
-            print('Error: session is not running')
-            return False
-
-        try:
-            if not self.select_cities():
-                return False
-
-            if not self.select_date():
-                return False
-
-            self.submit_search()
-            time.sleep(10)
-            return True
-
-        except Driver.failure_exceptions as e:
-            Driver.print_failure(e)
-            return False
+        return True
 
 
     def scrape(self) -> None:
         pass
 
-
-    def set_name(self):
-        self.name = 'greyhound'
-
-
-    def set_url(self):
-        self.url = 'https://greyhound.com/en'
