@@ -32,15 +32,15 @@ def find_tickets(bus_service_name: str, departure_city: str, arrival_city: str, 
 
 
 def main() -> None:
-    find_tickets('Greyhound', 'New York', 'Hartford', '2020-03-27')
+    # find_tickets('Peterpan', 'New York', 'Hartford', '2019-11-22')
 
-    # with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-    #     search_1 = executor.submit(find_tickets, 'Peterpan', 'New York', 'Hartford', '2020-03-27')
-    #     search_2 = executor.submit(find_tickets, 'Greyhound', 'New York', 'Hartford', '2020-03-27')
-    #
-    #     thread_list = [search_1, search_2]
-    #
-    #     (finished, pending) = futures.wait(thread_list, return_when=futures.ALL_COMPLETED)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        search_1 = executor.submit(find_tickets, 'Peterpan', 'New York', 'Hartford', '2020-03-27')
+        search_2 = executor.submit(find_tickets, 'Greyhound', 'New York', 'Hartford', '2020-03-27')
+
+        thread_list = [search_1, search_2]
+
+        (finished, pending) = futures.wait(thread_list, return_when=futures.ALL_COMPLETED)
 
 
 if __name__ == '__main__':

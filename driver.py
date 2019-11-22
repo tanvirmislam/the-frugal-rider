@@ -19,7 +19,7 @@ class Driver(object):
         self.chrome = None
         self.is_headless = None
         self.delay_after_view_change = 0.2
-        self.page_load_check_interval = 0.5
+        self.page_load_check_interval = 0.2
 
     def init_driver(self, is_headless: bool, width: int, height: int) -> bool:
         """

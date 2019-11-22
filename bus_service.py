@@ -1,6 +1,10 @@
-import time
-import threading
 import pandas as pd
+import time
+import calendar
+import threading
+import concurrent.futures
+from concurrent import futures
+from concurrent.futures.thread import ThreadPoolExecutor
 from abc import ABCMeta, abstractmethod
 from driver import Driver
 from ticket_order import TicketOrder
@@ -17,22 +21,27 @@ class BusService(metaclass=ABCMeta):
         self.driver = browser_driver
         self.order = bus_ticket_order
 
-        # Dataframes
-        self.list_of_schedules = []
-        self.columns = ['bus_service', 'departure_date', 'departure_time', 'departure_city', 'arrival_date', 'arrival_time', 'arrival_city', 'price']
+        # DataFrame
+        self.schedules = pd.DataFrame(
+            columns=['bus_service', 'departure_date', 'departure_time', 'departure_city',
+                     'arrival_date', 'arrival_time', 'arrival_city', 'price']
+        )
 
-        # Call function implemented by child classes
+        # Named month to number dictionary
+        self.month_abbr_to_num = {name.lower(): num for (num, name) in list(enumerate(calendar.month_abbr)) if num}
+
+        # Call functions implemented by child classes
         self.set_name()
         self.set_url()
 
     def __str__(self):
-        result =                                                                                                    \
-            '\n-----------------------------------------------------------------------------------------------\n' + \
-            '> ' + self.name +                                                                                      \
-            ' [' + str(threading.current_thread().name) + '] Results: ' +                                           \
-            '\n-----------------------------------------------------------------------------------------------\n' + \
-            (self.get_combined_schedule()).to_string() +                                                                            \
-            '\n-----------------------------------------------------------------------------------------------'
+        result =                                                            \
+            '\n-------------------------------------------------------\n' + \
+            '> ' + self.name +                                              \
+            ' [' + str(threading.current_thread().name) + '] Results: ' +   \
+            '\n-------------------------------------------------------\n' + \
+            self.schedules.to_string() +                                    \
+            '\n-------------------------------------------------------'
 
         return result
 
@@ -125,10 +134,3 @@ class BusService(metaclass=ABCMeta):
         full_msg = '\n> ' + self.name + ' [' + str(threading.current_thread().name) + ']: ' + msg
         print(full_msg)
 
-    def get_combined_schedule(self) -> pd.DataFrame:
-        if len(self.list_of_schedules) == 0:
-            return pd.DataFrame(columns=self.columns)
-
-        combined_df = pd.concat(self.list_of_schedules)
-        combined_df.sort_values(by='price', inplace=True)
-        return combined_df

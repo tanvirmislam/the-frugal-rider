@@ -59,7 +59,7 @@ class Peterpan(BusService):
         # Delay
         self.delay_for_autocomplete_suggestions = 0.2
         self.delay_for_arrival_city_load = 0.2
-        self.results_page_load_wait = 1.0
+        self.results_page_load_wait = 0.2
 
     def set_name(self):
         self.name = 'Peterpan'
@@ -161,9 +161,6 @@ class Peterpan(BusService):
 
         self.driver.move_to_element(calendar_month_name_elem)
 
-        # month name (abbreviated) to month number conversion dict
-        month_abbr_to_num = {name.lower(): num for (num, name) in list(enumerate(calendar.month_abbr)) if num}
-
         is_month_found = False
 
         while not is_month_found:
@@ -182,9 +179,9 @@ class Peterpan(BusService):
                 calendar_next_month_button_elem.click()
             elif curr_year > self.order.departure_date.year:
                 calendar_prev_month_button_elem.click()
-            elif month_abbr_to_num[curr_month.lower()[:3]] < month_abbr_to_num[self.order.departure_date.month_name().lower()[:3]]:
+            elif self.month_abbr_to_num[curr_month.lower()[:3]] < self.month_abbr_to_num[self.order.departure_date.month_name().lower()[:3]]:
                 calendar_next_month_button_elem.click()
-            elif month_abbr_to_num[curr_month.lower()[:3]] > month_abbr_to_num[self.order.departure_date.month_name().lower()[:3]]:
+            elif self.month_abbr_to_num[curr_month.lower()[:3]] > self.month_abbr_to_num[self.order.departure_date.month_name().lower()[:3]]:
                 calendar_prev_month_button_elem.click()
 
         # Iterate through the dates in the current month to find and click on the ticket order date
@@ -230,13 +227,15 @@ class Peterpan(BusService):
         return True
 
     def collect_data(self) -> bool:
-        df = pd.DataFrame(columns=self.columns)
-
         # If the results are loading, give it some time to finish
-        try:
-            self.driver.get_element(By.CLASS_NAME, self.result_container_id)
-        except selenium.common.exceptions.NoSuchElementException:
-            time.sleep(self.results_page_load_wait)
+        is_results_page_loaded = False
+        while not is_results_page_loaded:
+            try:
+                self.driver.get_element(By.ID, self.result_container_id)
+                is_results_page_loaded = True
+            except selenium.common.exceptions.NoSuchElementException:
+                self.display_message('Results page still loading, waiting for it to finish..')
+                time.sleep(self.results_page_load_wait)
 
         result_container_element = self.driver.get_element(By.ID, self.result_container_id)
         trip_container_elements = self.driver.get_relative_elements(result_container_element, By.CLASS_NAME, self.trip_containers_class)
@@ -246,21 +245,28 @@ class Peterpan(BusService):
 
             # If the trip has departed (price is not available), continue to the next trip
             if not price or price[0] != '$':
-                print('Trip has departed')
                 continue
 
-            departure_date = self.driver.get_relative_element(trip_element, By.XPATH, self.departure_date_xpath_relative_to_trip_container).get_attribute('innerHTML')
+            # Get rid of the $ sign
+            price = float(price[1:])
+
             departure_time = self.driver.get_relative_element(trip_element, By.XPATH, self.departure_time_xpath_relative_to_trip_container).get_attribute('innerHTML')
             departure_city = self.driver.get_relative_element(trip_element, By.XPATH, self.departure_city_xpath_relative_to_trip_container).get_attribute('innerHTML')
 
-            arrival_date = self.driver.get_relative_element(trip_element, By.XPATH, self.arrival_date_xpath_relative_to_trip_container).get_attribute('innerHTML')
+            # Full date received as: Thu, Mar 26
+            arrival_month_day = self.driver.get_relative_element(trip_element, By.XPATH, self.arrival_date_xpath_relative_to_trip_container).get_attribute('innerHTML').partition(',')[2].strip()
+            (arrival_month, arrival_day) = arrival_month_day.split(' ')
+            arrival_month = self.month_abbr_to_num[arrival_month.lower()]
+            arrival_year = self.order.departure_date.year if arrival_month >= self.order.departure_date.month else self.order.departure_date.year + 1
+            arrival_date = pd.Timestamp(str(arrival_year) + '-' + str(arrival_month) + '-' + str(arrival_day))
+
             arrival_time = self.driver.get_relative_element(trip_element, By.XPATH, self.arrival_time_xpath_relative_to_trip_container).get_attribute('innerHTML')
+
             arrival_city = self.driver.get_relative_element(trip_element, By.XPATH, self.arrival_city_xpath_relative_to_trip_container).get_attribute('innerHTML')
 
-            df = df.append(pd.Series([self.name, departure_date, departure_time, departure_city, arrival_date, arrival_time, arrival_city, price], index=self.columns), ignore_index=True)
-
-        # Thread safe operation: append
-        self.list_of_schedules.append(df)
+            self.schedules = self.schedules.append(pd.Series([self.name, self.order.departure_date, departure_time, departure_city,
+                                                              arrival_date, arrival_time, arrival_city, price],
+                                                             index=self.schedules.columns), ignore_index=True)
 
         return True
 

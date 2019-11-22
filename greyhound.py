@@ -48,14 +48,22 @@ class Greyhound(BusService):
 
         self.no_results_id = 'empty-calendar-message'
 
-        self.result_container_id = 'condensed-fare-listing'
-        self.trip_container_lists_xpath_relative_to_result_container = './/li[*][@class="fare"]'
-        self.departure_time_xpath_relative_to_trip_container = './/div[1]/div[1]/div[1]/div[1]/div[2]/p[1]'
-        # trip_container_xpath = '/html/body/div[3]/main/section[2]/div/div[3]/div[3]/div[2]/div/div[2]/div/ul/li[1]'
+        self.result_cities_container_xpath = '/html/body/div[3]/main/section[2]/div/div[3]/div[3]/div[2]/div/div[1]'
+        self.result_departure_city_xpath_relative_to_cities_container = 'div[1]/div[2]/div/span[1]'
+        self.result_arrival_city_xpath_relative_to_cities_container = 'div[1]/div[2]/div/span[3]'
+
+        self.result_container_class = 'condensed-fare-listing'
+        self.trip_container_lists_xpath_relative_to_result_container = 'li[*][@class="fare"][@data-time-to-sell="Sellable"]'
+
+        self.departure_time_xpath_relative_to_trip_container = 'div[1]/div[1]/div[1]/div[1]/div[2]/p[1]'
+        self.arrival_time_xpath_relative_to_trip_container = 'div[1]/div[1]/div[1]/div[2]/p'
+        self.arrival_day_diff_xpath_relative_to_trip_container = 'div[1]/div[1]/div[1]/div[2]/p/span'
+
+        self.price_xpath_relative_to_trip_container = 'div[1]/div[2]/div[2]/div[1]/div[1]/span[2]'
 
         # Delay
-        self.delay_for_autocomplete_suggestions = 1.2
-        self.results_page_load_wait = 2.0
+        self.delay_for_autocomplete_suggestions = 1.0
+        self.results_page_load_wait = 0.2
 
     def set_name(self):
         self.name = 'Greyhound'
@@ -147,9 +155,6 @@ class Greyhound(BusService):
         depart_datepicker_next_month_button_elem = self.driver.get_relative_element(depart_datepicker_calendar_elem, By.XPATH, self.depart_datepicker_next_month_button_xpath_relative_to_calendar_div)
         self.driver.move_to_element(depart_datepicker_month_name_elem)
 
-        # month name (abbreviated) to month number conversion dict
-        month_abbr_to_num = {name.lower(): num for (num, name) in list(enumerate(calendar.month_abbr)) if num}
-
         is_month_found = False
 
         while not is_month_found:
@@ -165,9 +170,9 @@ class Greyhound(BusService):
                 depart_datepicker_next_month_button_elem.click()
             elif curr_year > self.order.departure_date.year:
                 depart_datepicker_prev_month_button_elem.click()
-            elif month_abbr_to_num[curr_month.lower()[:3]] < month_abbr_to_num[self.order.departure_date.month_name().lower()[:3]]:
+            elif self.month_abbr_to_num[curr_month.lower()[:3]] < self.month_abbr_to_num[self.order.departure_date.month_name().lower()[:3]]:
                 depart_datepicker_next_month_button_elem.click()
-            elif month_abbr_to_num[curr_month.lower()[:3]] > month_abbr_to_num[self.order.departure_date.month_name().lower()[:3]]:
+            elif self.month_abbr_to_num[curr_month.lower()[:3]] > self.month_abbr_to_num[self.order.departure_date.month_name().lower()[:3]]:
                 depart_datepicker_prev_month_button_elem.click()
 
             # Refresh element to avoid StaleElement error
@@ -218,20 +223,43 @@ class Greyhound(BusService):
         return True
 
     def collect_data(self) -> bool:
-        df = pd.DataFrame(columns=self.columns)
-
         # If the results are loading, give it some time to finish
-        try:
-            self.driver.get_element(By.CLASS_NAME, self.result_container_id)
-        except selenium.common.exceptions.NoSuchElementException:
-            time.sleep(self.results_page_load_wait)
+        is_results_page_loaded = False
+        while not is_results_page_loaded:
+            try:
+                self.driver.get_element(By.CLASS_NAME, self.result_container_class)
+                is_results_page_loaded = True
+            except selenium.common.exceptions.NoSuchElementException:
+                self.display_message('Results page still loading, waiting for it to finish..')
+                time.sleep(self.results_page_load_wait)
 
-        result_container_element = self.driver.get_element(By.CLASS_NAME, self.result_container_id)
+        result_cities_container_element = self.driver.get_element(By.XPATH, self.result_cities_container_xpath)
+        departure_city = self.driver.get_relative_element(result_cities_container_element, By.XPATH, self.result_departure_city_xpath_relative_to_cities_container).get_attribute('innerHTML')
+        arrival_city = self.driver.get_relative_element(result_cities_container_element, By.XPATH, self.result_arrival_city_xpath_relative_to_cities_container).get_attribute('innerHTML')
+
+        result_container_element = self.driver.get_element(By.CLASS_NAME, self.result_container_class)
         trip_container_elements = self.driver.get_relative_elements(result_container_element, By.XPATH, self.trip_container_lists_xpath_relative_to_result_container)
 
         for trip_element in trip_container_elements:
             departure_time_element = self.driver.get_relative_element(trip_element, By.XPATH, self.departure_time_xpath_relative_to_trip_container)
-            departure_time = departure_time_element.get_attribute('innerHTML').partition('<span')[0]
-            print(departure_time)
+            departure_time = departure_time_element.get_attribute('innerHTML').partition('<')[0].strip().upper()
+
+            arrival_time_element = self.driver.get_relative_element(trip_element, By.XPATH, self.arrival_time_xpath_relative_to_trip_container)
+            arrival_time = arrival_time_element.get_attribute('innerHTML').partition('<')[0].strip().upper()
+
+            arrival_day_diff_element = self.driver.get_relative_element(trip_element, By.XPATH, self.arrival_day_diff_xpath_relative_to_trip_container)
+            arrival_day_diff = arrival_day_diff_element.get_attribute('innerHTML')
+            if arrival_day_diff != '':
+                arrival_day_diff = arrival_day_diff.partition('(+')[2].partition('days')[0].strip()
+                arrival_date = self.order.departure_date + pd.Timedelta(days=int(arrival_day_diff))
+            else:
+                arrival_date = self.order.departure_date
+
+            price_element = self.driver.get_relative_element(trip_element, By.XPATH, self.price_xpath_relative_to_trip_container)
+            price = float(price_element.get_attribute('innerHTML').partition('span>')[2])
+
+            self.schedules = self.schedules.append(pd.Series([self.name, self.order.departure_date, departure_time, departure_city,
+                                                              arrival_date, arrival_time, arrival_city, price],
+                                                             index=self.schedules.columns), ignore_index=True)
 
         return True
