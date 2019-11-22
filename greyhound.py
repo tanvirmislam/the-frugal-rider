@@ -46,17 +46,22 @@ class Greyhound(BusService):
 
         self.submit_button_id = 'fare-search-btn'
 
+        self.no_results_id = 'empty-calendar-message'
+
+        self.result_container_id = 'condensed-fare-listing'
+        self.trip_container_lists_xpath_relative_to_result_container = './/li[*][@class="fare"]'
+        self.departure_time_xpath_relative_to_trip_container = './/div[1]/div[1]/div[1]/div[1]/div[2]/p[1]'
+        # trip_container_xpath = '/html/body/div[3]/main/section[2]/div/div[3]/div[3]/div[2]/div/div[2]/div/ul/li[1]'
+
         # Delay
         self.delay_for_autocomplete_suggestions = 1.2
-
+        self.results_page_load_wait = 2.0
 
     def set_name(self):
         self.name = 'Greyhound'
 
-
     def set_url(self):
         self.home_url = 'https://greyhound.com/en'
-
 
     def select_cities(self) -> bool:
         self.display_message('Selecting departure city')
@@ -118,7 +123,6 @@ class Greyhound(BusService):
             return False
 
         return True
-
 
     def select_dates(self) -> bool:
         self.display_message('Selecting departure date')
@@ -199,7 +203,6 @@ class Greyhound(BusService):
         self.driver.press_key(Keys.TAB)
         return True
 
-
     def submit_search(self) -> bool:
         self.display_message('Submitting search')
 
@@ -214,7 +217,21 @@ class Greyhound(BusService):
 
         return True
 
-
     def collect_data(self) -> bool:
-        pass
+        df = pd.DataFrame(columns=self.columns)
 
+        # If the results are loading, give it some time to finish
+        try:
+            self.driver.get_element(By.CLASS_NAME, self.result_container_id)
+        except selenium.common.exceptions.NoSuchElementException:
+            time.sleep(self.results_page_load_wait)
+
+        result_container_element = self.driver.get_element(By.CLASS_NAME, self.result_container_id)
+        trip_container_elements = self.driver.get_relative_elements(result_container_element, By.XPATH, self.trip_container_lists_xpath_relative_to_result_container)
+
+        for trip_element in trip_container_elements:
+            departure_time_element = self.driver.get_relative_element(trip_element, By.XPATH, self.departure_time_xpath_relative_to_trip_container)
+            departure_time = departure_time_element.get_attribute('innerHTML').partition('<span')[0]
+            print(departure_time)
+
+        return True

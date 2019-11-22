@@ -20,13 +20,18 @@ class Peterpan(BusService):
 
         # Full XPATH's of required elements
         self.oneway_radiobutton_xpath = '/html/body/div[7]/div[1]/div[1]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/div/div/div/div/div/div[2]/div/div[1]/div[1]/div/div[1]/label/span'
+
         self.departure_xpath = '/html/body/div[7]/div[1]/div[1]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/div/div/div/div/div/div[2]/div/div[2]/div[1]/div/div[2]/div[1]/div[1]/input'
-        self.departure_cities_list_xpath = '/html/body/div[7]/div[1]/div[1]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/div/div/div/div/div/div[2]/div/div[2]/div[1]/div/div[2]/div[1]/ul/li[*]'
+
+        self.departure_cities_list_container_xpath = '/html/body/div[7]/div[1]/div[1]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/div/div/div/div/div/div[2]/div/div[2]/div[1]/div/div[2]/div[1]/ul'
+        self.departure_cities_list_xpath_relative_to_container = './/li[*][@aria-selected="false"]'
         self.departure_city_clickable_xpath_relative_to_list = './/a'
         self.departure_city_name_xpath_relative_to_list = './/a/span'
 
         self.arrival_xpath = '/html/body/div[7]/div[1]/div[1]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/div/div/div/div/div/div[2]/div/div[2]/div[2]/div/div[2]/div[1]/div[1]/input'
-        self.arrival_cities_list_xpath = '/html/body/div[7]/div[1]/div[1]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/div/div/div/div/div/div[2]/div/div[2]/div[2]/div/div[2]/div[1]/ul/li[*]'
+
+        self.arrival_cities_list_container_xpath = '/html/body/div[7]/div[1]/div[1]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/div/div/div/div/div/div[2]/div/div[2]/div[2]/div/div[2]/div[1]/ul'
+        self.arrival_cities_list_xpath_relative_to_container = './/li[*][@aria-selected="false"]'
         self.arrival_city_clickable_xpath_relative_to_list = './/a'
         self.arrival_city_name_xpath_relative_to_list = './/a/span'
 
@@ -47,44 +52,50 @@ class Peterpan(BusService):
         self.arrival_date_xpath_relative_to_trip_container = './/div/div[3]/div[1]'
         self.arrival_time_xpath_relative_to_trip_container = './/div/div[3]/div[2]'
         self.arrival_city_xpath_relative_to_trip_container = './/div/div[3]/div[3]'
+        self.price_info_container_xpath_relative_to_trip_container = './/div/div[5][@class="trip-info"]'
+        self.price_xpath_relative_to_info_container = './/div[1]/div/div'
+        self.price_xpath_relative_to_trip_container = './/div/div[5]/div[1]/div/div'
 
         # Delay
-        self.delay_for_arrival_city_load = 0.5
-
+        self.delay_for_autocomplete_suggestions = 0.2
+        self.delay_for_arrival_city_load = 0.2
+        self.results_page_load_wait = 1.0
 
     def set_name(self):
         self.name = 'Peterpan'
 
-
     def set_url(self):
         self.home_url = 'https://peterpanbus.com/'
-
 
     def select_cities(self) -> bool:
         self.display_message('Selecting departure city')
 
-        # Get Web elements by XPATH
-        departure_element = self.driver.get_element(By.XPATH, self.departure_xpath)
-        arrival_element = self.driver.get_element(By.XPATH, self.arrival_xpath)
+        # Get Web element by XPATH
+        departure_city_text_box_element = self.driver.get_element(By.XPATH, self.departure_xpath)
 
         # Scroll to departure city box, and click it to expand the list
-        self.driver.move_to_element(departure_element)
-        departure_element.click()
+        self.driver.move_to_element(departure_city_text_box_element)
+        departure_city_text_box_element.click()
+        self.driver.fill_text(departure_city_text_box_element, self.order.departure_city)
+
+        # Wait for suggestions to show up
+        time.sleep(self.delay_for_autocomplete_suggestions)
 
         # Get the list elements after the drop-down appears
-        departure_cities_li_elements = self.driver.get_elements(By.XPATH, self.departure_cities_list_xpath)
+        departure_city_list_container_element = self.driver.get_element(By.XPATH, self.departure_cities_list_container_xpath)
+        departure_cities_li_elements = self.driver.get_relative_elements(departure_city_list_container_element, By.XPATH, self.departure_cities_list_xpath_relative_to_container)
         is_departure_city_found = False
 
         # Iterate the list and select the correct city
         for li_element in departure_cities_li_elements:
-            # Get the city name element
-            city_name_element = self.driver.get_relative_element(li_element, By.XPATH, self.departure_city_name_xpath_relative_to_list)
-            # print(city_name_element.get_attribute('innerHTML'))
+            # Get the city name
+            city_name = li_element.get_attribute('aria-label')
+            # print(city_name)
 
             # Check the name and select if found
-            if self.order.departure_city in city_name_element.get_attribute('innerHTML'):
-                self.driver.move_to_element(city_name_element)
-                city_name_element.click()
+            if self.order.departure_city in city_name:
+                self.driver.move_to_element(li_element)
+                li_element.click()
                 is_departure_city_found = True
                 break
 
@@ -94,26 +105,32 @@ class Peterpan(BusService):
 
         self.display_message('Selecting arrival city')
 
+        # Get Web element by XPATH
+        arrival_city_text_box_element = self.driver.get_element(By.XPATH, self.arrival_xpath)
+
         # Scroll to departure city box, and click it to expand the list
-        self.driver.move_to_element(arrival_element)
-        arrival_element.click()
+        self.driver.move_to_element(arrival_city_text_box_element)
+        arrival_city_text_box_element.click()
+        self.driver.fill_text(arrival_city_text_box_element, self.order.arrival_city)
 
         # Wait for arrival cities to load based on departure city selection
         time.sleep(self.delay_for_arrival_city_load)
 
         # Get the list elements after the drop-down appears
-        arrival_cities_li_elements = self.driver.get_elements(By.XPATH, self.arrival_cities_list_xpath)
+        arrival_city_list_container_element = self.driver.get_element(By.XPATH, self.arrival_cities_list_container_xpath)
+        arrival_cities_li_elements = self.driver.get_relative_elements(arrival_city_list_container_element, By.XPATH, self.arrival_cities_list_xpath_relative_to_container)
         is_arrival_city_found = False
 
+        # Iterate the list and select the correct city
         for li_element in arrival_cities_li_elements:
-            # Get the city name element
-            city_name_element = self.driver.get_relative_element(li_element, By.XPATH, self.departure_city_name_xpath_relative_to_list)
-            # print(city_name_element.get_attribute('innerHTML'))
+            # Get the city name
+            city_name = li_element.get_attribute('aria-label')
+            # print(city_name)
 
             # Check the name and select if found
-            if self.order.arrival_city in city_name_element.get_attribute('innerHTML'):
-                self.driver.move_to_element(city_name_element)
-                city_name_element.click()
+            if self.order.arrival_city in city_name:
+                self.driver.move_to_element(li_element)
+                li_element.click()
                 is_arrival_city_found = True
                 break
 
@@ -122,7 +139,6 @@ class Peterpan(BusService):
             return False
 
         return True
-
 
     def select_dates(self) -> bool:
         self.display_message('Selecting departure date')
@@ -171,7 +187,6 @@ class Peterpan(BusService):
             elif month_abbr_to_num[curr_month.lower()[:3]] > month_abbr_to_num[self.order.departure_date.month_name().lower()[:3]]:
                 calendar_prev_month_button_elem.click()
 
-
         # Iterate through the dates in the current month to find and click on the ticket order date
         calendar_row_elements = self.driver.get_elements(By.CLASS_NAME, self.calendar_row_class)
 
@@ -200,7 +215,6 @@ class Peterpan(BusService):
         self.driver.press_key(Keys.TAB)
         return True
 
-
     def submit_search(self) -> bool:
         self.display_message('Submitting search')
 
@@ -215,12 +229,26 @@ class Peterpan(BusService):
 
         return True
 
-
     def collect_data(self) -> bool:
+        df = pd.DataFrame(columns=self.columns)
+
+        # If the results are loading, give it some time to finish
+        try:
+            self.driver.get_element(By.CLASS_NAME, self.result_container_id)
+        except selenium.common.exceptions.NoSuchElementException:
+            time.sleep(self.results_page_load_wait)
+
         result_container_element = self.driver.get_element(By.ID, self.result_container_id)
         trip_container_elements = self.driver.get_relative_elements(result_container_element, By.CLASS_NAME, self.trip_containers_class)
 
         for trip_element in trip_container_elements:
+            price = self.driver.get_relative_element(trip_element, By.XPATH, self.price_xpath_relative_to_trip_container).get_attribute('innerHTML')
+
+            # If the trip has departed (price is not available), continue to the next trip
+            if not price or price[0] != '$':
+                print('Trip has departed')
+                continue
+
             departure_date = self.driver.get_relative_element(trip_element, By.XPATH, self.departure_date_xpath_relative_to_trip_container).get_attribute('innerHTML')
             departure_time = self.driver.get_relative_element(trip_element, By.XPATH, self.departure_time_xpath_relative_to_trip_container).get_attribute('innerHTML')
             departure_city = self.driver.get_relative_element(trip_element, By.XPATH, self.departure_city_xpath_relative_to_trip_container).get_attribute('innerHTML')
@@ -229,7 +257,10 @@ class Peterpan(BusService):
             arrival_time = self.driver.get_relative_element(trip_element, By.XPATH, self.arrival_time_xpath_relative_to_trip_container).get_attribute('innerHTML')
             arrival_city = self.driver.get_relative_element(trip_element, By.XPATH, self.arrival_city_xpath_relative_to_trip_container).get_attribute('innerHTML')
 
-            self.schedules = self.schedules.append(pd.Series([departure_date, departure_time, departure_city, arrival_date, arrival_time, arrival_city], index=self.schedules.columns), ignore_index=True)
+            df = df.append(pd.Series([self.name, departure_date, departure_time, departure_city, arrival_date, arrival_time, arrival_city, price], index=self.columns), ignore_index=True)
+
+        # Thread safe operation: append
+        self.list_of_schedules.append(df)
 
         return True
 

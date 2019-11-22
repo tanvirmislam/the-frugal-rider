@@ -32,7 +32,7 @@ def find_tickets(bus_service_name: str, departure_city: str, arrival_city: str, 
 
 
 def main() -> None:
-    find_tickets('Peterpan', 'New York', 'Hartford', '2020-02-15')
+    find_tickets('Greyhound', 'New York', 'Hartford', '2020-03-27')
 
     # with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
     #     search_1 = executor.submit(find_tickets, 'Peterpan', 'New York', 'Hartford', '2020-03-27')
