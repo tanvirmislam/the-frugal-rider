@@ -28,11 +28,11 @@ class ServiceManager:
             thread_list = []
 
             for bus in self.bus_services:
-                thread_list.append(executor.submit(self.__find_subroutine, bus))
+                thread_list.append(executor.submit(self.__find_tickets_thread_subroutine, bus))
 
             (finished, pending) = futures.wait(thread_list, return_when=futures.ALL_COMPLETED)
 
-    def __find_subroutine(self, bus_service_object: BusService):
+    def __find_tickets_thread_subroutine(self, bus_service_object: BusService):
         # Start session
         bus_service_object.start_session()
 

@@ -1,10 +1,6 @@
 import pandas as pd
-import time
 import calendar
 import threading
-import concurrent.futures
-from concurrent import futures
-from concurrent.futures.thread import ThreadPoolExecutor
 from abc import ABCMeta, abstractmethod
 from driver import Driver
 from ticket_order import TicketOrder

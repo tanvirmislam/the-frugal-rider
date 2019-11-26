@@ -1,5 +1,4 @@
 import pandas as pd
-import traceback
 
 
 class TicketOrder(object):

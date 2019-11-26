@@ -1,7 +1,5 @@
 import pandas as pd
 import time
-import calendar
-import threading
 
 import selenium
 from selenium.webdriver.common.by import By
