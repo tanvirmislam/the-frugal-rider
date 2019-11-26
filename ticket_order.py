@@ -8,12 +8,14 @@ class TicketOrder(object):
         self.departure_city = None
         self.arrival_city = None
         self.departure_date = None
+        self.status = False
 
     def setup(self, dep: str, arr: str, dep_date: str) -> bool:
         try:
             self.departure_date = pd.Timestamp(dep_date)
             self.departure_city = dep
             self.arrival_city = arr
+            self.status = True
             return True
         except ValueError:
             print(
