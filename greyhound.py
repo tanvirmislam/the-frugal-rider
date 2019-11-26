@@ -61,6 +61,10 @@ class Greyhound(BusService):
 
         self.price_xpath_relative_to_trip_container = 'div[1]/div[2]/div[2]/div[1]/div[1]/span[2]'
 
+        '/html/body/div[3]/main/section[2]/div/div[3]/div[3]/div[2]/div/div[2]/div/ul/li[2]'
+        '/html/body/div[3]/main/section[2]/div/div[3]/div[3]/div[2]/div/div[2]/div/ul/li[2]/div[1]/div[2]/div[2]/div/div/div/span[1]'
+        '/html/body/div[3]/main/section[2]/div/div[3]/div[3]/div[2]/div/div[2]/div/ul/li[3]/div[1]/div[2]/div[2]/div[1]/div[2]/a/span[2]/span'
+
         # Delay
         self.delay_for_autocomplete_suggestions = 1.0
         self.results_page_load_wait = 0.2
@@ -241,6 +245,15 @@ class Greyhound(BusService):
         trip_container_elements = self.driver.get_relative_elements(result_container_element, By.XPATH, self.trip_container_lists_xpath_relative_to_result_container)
 
         for trip_element in trip_container_elements:
+            # Check if the ticket is buy-able or sold out
+            try:
+                price_element = self.driver.get_relative_element(trip_element, By.XPATH, self.price_xpath_relative_to_trip_container)
+            except selenium.common.exceptions.NoSuchElementException:
+                # SOLD OUT
+                continue
+
+            price = float(price_element.get_attribute('innerHTML').partition('span>')[2])
+
             departure_time_element = self.driver.get_relative_element(trip_element, By.XPATH, self.departure_time_xpath_relative_to_trip_container)
             departure_time = departure_time_element.get_attribute('innerHTML').partition('<')[0].strip().upper()
 
@@ -254,9 +267,6 @@ class Greyhound(BusService):
                 arrival_date = self.order.departure_date + pd.Timedelta(days=int(arrival_day_diff))
             else:
                 arrival_date = self.order.departure_date
-
-            price_element = self.driver.get_relative_element(trip_element, By.XPATH, self.price_xpath_relative_to_trip_container)
-            price = float(price_element.get_attribute('innerHTML').partition('span>')[2])
 
             self.schedules = self.schedules.append(pd.Series([self.name, self.order.departure_date, departure_time, departure_city,
                                                               arrival_date, arrival_time, arrival_city, price],

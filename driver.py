@@ -77,7 +77,7 @@ class Driver(object):
         options.add_argument('disable-notifications')
         options.add_argument('log-level=3')
 
-        options.add_argument('--window-size=' + str(width) + 'x' + str(height))
+        options.add_argument('window-size=' + str(width) + ',' + str(height))
 
         if system_name == "windows":
             options.add_argument("--start-maximized")
