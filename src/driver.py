@@ -51,10 +51,11 @@ class Driver(object):
             ext = '.exe'
 
         # Chromedriver version
-        version = '77'
+        version = '79'
 
         driver_file_name = system_name + '_chromedriver_' + version + ext
         exec_path = Path.cwd() / 'util' / 'chromedriver/' / driver_file_name
+        print(exec_path)
 
         if (not exec_path.exists()) or (not exec_path.is_file()):
             print('Chromedriver file not found')
