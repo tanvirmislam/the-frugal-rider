@@ -18,11 +18,11 @@ class Greyhound(BusService):
 
         # Full Xpath
         self.departure_city_text_box_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[1]/div[1]/div/input[1]'
-        self.departure_city_autocomplete_lists_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[1]/div[1]/div/ul/li[*][@class="ui-menu-item"]'
+        self.departure_city_autocomplete_lists_xpath = '//ul[@id="ui-id-1"]/li[*][@class="ui-menu-item"]'
         self.departure_city_name_xpath_relative_to_list_item = './/div'
 
         self.arrival_city_text_box_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[1]/div[2]/div/input[1]'
-        self.arrival_city_autocomplete_lists_xpath = '/html/body/div[3]/main/section[1]/div/div/form/div[1]/div[1]/div[2]/div/ul/li[*][@class="ui-menu-item"]'
+        self.arrival_city_autocomplete_lists_xpath = '//ul[@id="ui-id-2"]/li[*][@class="ui-menu-item"]'
         self.arrival_city_name_xpath_relative_to_list_item = './/div'
 
         self.depart_date_box_id = 'datepicker-from'
@@ -60,7 +60,7 @@ class Greyhound(BusService):
         self.price_xpath_relative_to_trip_container = 'div[1]/div[2]/div[2]/div[1]/div[1]/span[2]'
 
         # Delay
-        self.delay_for_autocomplete_suggestions = 1.0
+        self.delay_for_autocomplete_suggestions = 0.5
         self.results_page_load_wait = 0.2
 
     def set_name(self):
@@ -83,7 +83,12 @@ class Greyhound(BusService):
         # Look through the suggestions and click
         departure_city_list_elements = self.driver.get_elements(By.XPATH, self.departure_city_autocomplete_lists_xpath)
         is_departure_city_found = False
-        # print('size of departure_city_list_elements: ' + str(len(departure_city_list_elements)))
+
+        # Wait for autocomplete list to load
+        while not departure_city_list_elements:
+            self.display_message('Departure city autocomplete list still loading')
+            time.sleep(self.delay_for_autocomplete_suggestions * 3)
+            departure_city_list_elements = self.driver.get_elements(By.XPATH, self.departure_city_autocomplete_lists_xpath)
 
         for li_element in departure_city_list_elements:
             curr_city = li_element.get_attribute('aria-label')
@@ -112,7 +117,12 @@ class Greyhound(BusService):
         # Look through the suggestions and click
         arrival_city_list_elements = self.driver.get_elements(By.XPATH, self.arrival_city_autocomplete_lists_xpath)
         is_arrival_city_found = False
-        # print('size of arrival_city_list_elements: ' + str(len(arrival_city_list_elements)))
+
+        # Wait for autocomplete list to load
+        while not arrival_city_list_elements:
+            self.display_message('Arrival city autocomplete list still loading')
+            time.sleep(self.delay_for_autocomplete_suggestions * 3)
+            arrival_city_list_elements = self.driver.get_elements(By.XPATH, self.arrival_city_autocomplete_lists_xpath)
 
         for li_element in arrival_city_list_elements:
             curr_city = li_element.get_attribute('aria-label')

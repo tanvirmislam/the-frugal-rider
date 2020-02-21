@@ -117,7 +117,7 @@ class BusService(metaclass=ABCMeta):
     def setup_ticket_order(self, dep_city: str, arr_city: str, dep_date: str) -> bool:
         return self.order.setup(dep_city, arr_city, dep_date)
 
-    def start_session(self, is_headless: bool = True, width: int = 1920, height: int = 1080):
+    def start_session(self, is_headless: bool = False, width: int = 1920, height: int = 1080):
         self.driver.init_driver(is_headless, width, height)
         self.is_session_running = True
         self.driver.get_url(self.home_url)

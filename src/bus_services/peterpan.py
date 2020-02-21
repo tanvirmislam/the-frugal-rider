@@ -83,8 +83,14 @@ class Peterpan(BusService):
 
         # Get the list elements after the drop-down appears
         departure_city_list_container_element = self.driver.get_element(By.XPATH, self.departure_cities_list_container_xpath)
+
         departure_cities_li_elements = self.driver.get_relative_elements(departure_city_list_container_element, By.XPATH, self.departure_cities_list_xpath_relative_to_container)
         is_departure_city_found = False
+
+        while not departure_cities_li_elements:
+            self.display_message('Departure city autocomplete list still loading')
+            time.sleep(self.delay_for_autocomplete_suggestions * 2)
+            departure_cities_li_elements = self.driver.get_relative_elements(departure_city_list_container_element, By.XPATH, self.departure_cities_list_xpath_relative_to_container)
 
         # Iterate the list and select the correct city
         for li_element in departure_cities_li_elements:
@@ -118,8 +124,14 @@ class Peterpan(BusService):
 
         # Get the list elements after the drop-down appears
         arrival_city_list_container_element = self.driver.get_element(By.XPATH, self.arrival_cities_list_container_xpath)
+
         arrival_cities_li_elements = self.driver.get_relative_elements(arrival_city_list_container_element, By.XPATH, self.arrival_cities_list_xpath_relative_to_container)
         is_arrival_city_found = False
+
+        while not arrival_cities_li_elements:
+            self.display_message('Arrival city autocomplete list still loading')
+            time.sleep(self.delay_for_autocomplete_suggestions * 2)
+            arrival_cities_li_elements = self.driver.get_relative_elements(arrival_city_list_container_element, By.XPATH, self.arrival_cities_list_xpath_relative_to_container)
 
         # Iterate the list and select the correct city
         for li_element in arrival_cities_li_elements:

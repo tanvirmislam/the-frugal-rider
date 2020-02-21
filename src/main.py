@@ -3,7 +3,7 @@ from service_manager import ServiceManager
 
 def main() -> None:
     manager = ServiceManager()
-    manager.setup_ticket_order('New York', 'Hartford', '2019-12-26')
+    manager.setup_ticket_order('New York', 'Hartford', '2020-02-26')
     manager.find_tickets()
 
     print(manager.get_combined_schedules())

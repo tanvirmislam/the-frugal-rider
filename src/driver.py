@@ -51,7 +51,7 @@ class Driver(object):
             ext = '.exe'
 
         # Chromedriver version
-        version = '77'
+        version = '79'
 
         driver_file_name = system_name + '_chromedriver_' + version + ext
         exec_path = Path.cwd() / 'util' / 'chromedriver/' / driver_file_name
@@ -69,6 +69,7 @@ class Driver(object):
             options.headless = True
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('window-size=' + str(width) + ',' + str(height))
         else:
             options.headless = False
 
@@ -77,7 +78,6 @@ class Driver(object):
         options.add_argument('disable-notifications')
         options.add_argument('log-level=3')
 
-        options.add_argument('window-size=' + str(width) + ',' + str(height))
 
         if system_name == "windows":
             options.add_argument("--start-maximized")
